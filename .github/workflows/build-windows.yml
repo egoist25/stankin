@@ -1,0 +1,41 @@
+
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**/*.cpp'
+      - '.github/workflows/build-windows.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Install compiler
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Compile laboratory works
+        shell: msys2 {0}
+        run: |
+          find . -type f -name '*.cpp' ! -path './.github/*' -print0 |
+          while IFS= read -r -d '' file; do
+            output="${file%.cpp}.exe"
+            echo "Compiling: $file"
+            g++ -std=c++17 -static -static-libgcc -static-libstdc++ "$file" -o "$output" || exit 1
+          done
+
+      - name: Upload EXE files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-EXE
+          path: '**/*.exe'
+          if-no-files-found: error
